@@ -307,14 +307,19 @@ app.delete('/api/knowledge/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
 
-        await pool.query('DELETE FROM knowledge_base WHERE id = $1', [id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: (error as Error).message });
     }
 });
 
-app.listen(port, () => {
-    console.log(`Admin dashboard running at http://localhost:${port}`);
-});
+// For Vercel, we need to export the app
+export default app;
+
+// Only listen if running locally (not imported as a module)
+if (require.main === module) {
+    app.listen(port, () => {
+        console.log(`Admin dashboard running at http://localhost:${port}`);
+    });
+}
 

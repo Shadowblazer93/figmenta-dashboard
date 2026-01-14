@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "nodemon --exec ts-node src/server.ts",
-    "build": "tsc"
+    "build": "tsc && cp -r src/public dist/public"
   },
   "dependencies": {
     "@discordjs/rest": "^2.6.0",
