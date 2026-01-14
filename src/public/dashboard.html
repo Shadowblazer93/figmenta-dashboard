@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figmenta Bot Admin</title>
+    <style>
+        :root { 
+            --primary: #5865F2; 
+            --primary-hover: #4752c4;
+            --bg: #2C2F33; 
+            --panel: #23272A; 
+            --text: #FFFFFF; 
+            --text-secondary: #99AAB5;
+            --danger: #ed4245;
+            --success: #3ba55c;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            background: linear-gradient(135deg, #23272A 0%, #2f3136 100%);
+            color: var(--text); 
+            margin: 0; 
+            display: flex; 
+            height: 100vh;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: #111; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #000; }
+
+        nav { 
+            background: rgba(35, 39, 42, 0.95); 
+            width: 280px; 
+            height: 100vh; 
+            padding: 30px 20px; 
+            box-sizing: border-box; 
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        }
+
+        nav h1 { 
+            margin-top: 0; 
+            font-size: 1.5rem; 
+            margin-bottom: 2rem; 
+            color: var(--primary);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        nav a { 
+            display: block; 
+            color: var(--text-secondary); 
+            text-decoration: none; 
+            padding: 12px 15px; 
+            margin-bottom: 8px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        nav a:hover { 
+            background: rgba(88, 101, 242, 0.1); 
+            color: var(--text); 
+        }
+
+        nav a.active { 
+            background: var(--primary); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(88, 101, 242, 0.3);
+        }
+
+        main { flex: 1; padding: 40px 60px; overflow-y: auto; }
+
+        .section { 
+            display: none; 
+            animation: fadeIn 0.3s ease-in-out; 
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section.active { display: block; }
+        
+        h2 { 
+            font-size: 1.8rem; 
+            margin-bottom: 20px; 
+            font-weight: 600; 
+            color: white;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+        }
+        
+        p { color: var(--text-secondary); line-height: 1.5; margin-bottom: 1.5rem; }
+
+        .card { 
+            background: var(--panel); 
+            padding: 25px; 
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+            box-shadow: var(--card-shadow);
+            border: 1px solid #333;
+        }
+
+        .card h3 { margin-top: 0; font-size: 1.2rem; }
+
+        textarea { 
+            width: 100%; 
+            height: 350px; 
+            background: #18191c; 
+            color: #ddd; 
+            border: 1px solid #444; 
+            padding: 15px; 
+            font-family: 'Consolas', 'Monaco', monospace; 
+            font-size: 0.95rem;
+            line-height: 1.5;
+            border-radius: 8px;
+            box-sizing: border-box; /* Key fix for overflow */
+            resize: vertical;      /* User can resize height only */
+            transition: border-color 0.2s;
+        }
+        
+        textarea:focus, input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.2);
+        }
+
+        input[type="text"], input[type="file"], select { 
+            background: #18191c; 
+            border: 1px solid #444; 
+            color: white; 
+            padding: 12px; 
+            border-radius: 6px;
+            width: 300px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        select { width: 100%; max-width: 400px; cursor: pointer; }
+
+        button { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            cursor: pointer; 
+            border-radius: 6px; 
+            font-size: 0.95rem; 
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover { 
+            background: var(--primary-hover); 
+            transform: translateY(-1px);
+        }
+        
+        button:active { transform: translateY(0); }
+
+        ul { list-style: none; padding: 0; }
+        
+        li { 
+            background: #18191c; 
+            padding: 15px; 
+            margin-bottom: 10px; 
+            border-radius: 8px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border: 1px solid #333;
+            transition: transform 0.2s;
+        }
+        
+        li:hover { transform: translateX(5px); border-color: #555; }
+
+        .delete-btn { 
+            background: rgba(237, 66, 69, 0.1); 
+            color: var(--danger); 
+            padding: 8px 16px; 
+            font-size: 0.85rem; 
+            margin-top: 0;
+        }
+        
+        .delete-btn:hover { 
+            background: var(--danger); 
+            color: white; 
+        }
+
+        /* --- TOAST NOTIFICATIONS --- */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--panel);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 250px;
+            border-left: 4px solid var(--primary);
+            animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: auto;
+            opacity: 0;
+            transform: translateX(100%);
+            animation-fill-mode: forwards;
+        }
+
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+        
+        .toast-content { flex: 1; font-size: 0.9rem; }
+        
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateX(100%); }
+        }
+
+        /* --- CUSTOM MODAL --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+        
+        .modal {
+            background: var(--panel);
+            padding: 30px;
+            border-radius: 12px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            transform: scale(0.9);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid #444;
+        }
+        .modal-overlay.open .modal { transform: scale(1); }
+        
+        .modal h3 { margin-top: 0; color: white; }
+        .modal p { margin-bottom: 25px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-btn { padding: 10px 20px; border-radius: 6px; cursor: pointer; border: none; font-weight: 600; }
+        .btn-cancel { background: transparent; color: #ccc; border: 1px solid #444; }
+        .btn-cancel:hover { background: rgba(255,255,255,0.05); color: white; }
+        .btn-confirm { background: var(--primary); color: white; }
+        .btn-confirm.danger { background: var(--danger); }
+        .btn-confirm:hover { filter: brightness(1.1); }
+
+    </style>
+</head>
+<body>
+    <div id="toast-container"></div>
+    
+    <!-- Confirm Modal Template -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 id="modal-title">Confirm Action</h3>
+            <p id="modal-msg">Are you sure you want to proceed?</p>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button id="modal-confirm-btn" class="modal-btn btn-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <nav>
+        <h1>🤖 Connected Copilot</h1>
+        <a onclick="show('instructions')" class="active">Systems Instructions</a>
+        <a onclick="show('channels')">Allowed Channels</a>
+        <a onclick="show('memory')">Memory Control</a>
+        <a onclick="show('knowledge')">Knowledge Base</a>
+        
+        <div style="margin-top: auto;"></div>
+        
+        <!-- Bot Status -->
+        <div style="padding: 0 15px 15px 15px;">
+             <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px;">
+                <div id="status-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #99AAB5; transition: background 0.3s ease;"></div>
+                <span id="status-text" style="font-size: 0.9rem; font-weight: 600; color: #99AAB5;">Checking...</span>
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid #333; margin: 0 15px 10px 15px;"></div>
+
+        <div style="margin-bottom: 5px; padding: 0 15px; font-size: 0.9rem; color: #99AAB5;">
+            <div style="font-size: 0.8rem; margin-bottom: 2px;">Logged in as:</div>
+            <div id="user-info-display" style="color: white; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">...</div>
+        </div>
+        <a onclick="logout()" style="color: #ed4245;">Logout</a>
+    </nav>
+    <main>
+        <!-- Instructions Section -->
+        <div id="instructions" class="section active">
+            <h2>System Instructions</h2>
+            <p>Define the bot's persona and rules.</p>
+            <div class="card">
+                <select id="instruct-channel-select" onchange="loadInstructions()" style="padding: 10px; background: #111; color: white; border: 1px solid #444; width: 100%; margin-bottom: 10px;">
+                    <option value="">(Global Default)</option>
+                </select>
+                <textarea id="sys-instruct"></textarea>
+                <br><br>
+                <button onclick="saveInstructions()">Save Instructions</button>
+            </div>
+        </div>
+
+        <!-- Channels Section -->
+        <div id="channels" class="section">
+            <h2>Allowed Channels</h2>
+            <div class="card">
+                <input type="text" id="new-channel" placeholder="Channel ID">
+                <button onclick="addChannel()">Add Channel</button>
+            </div>
+            <ul id="channel-list"></ul>
+        </div>
+
+        <!-- Memory Section -->
+        <div id="memory" class="section">
+            <h2>Memory Control</h2>
+            <div class="card">
+                <p>Select a channel to view its rolling summary.</p>
+                <select id="memory-channel-select" style="padding: 10px; background: #111; color: white; border: 1px solid #444;" onchange="loadMemory()">
+                    <option value="">Select Channel...</option>
+                </select>
+                <br><br>
+                <textarea id="memory-view" readonly style="height: 200px;"></textarea>
+                <br><br>
+                <button onclick="resetMemory()" class="delete-btn">Reset Memory</button>
+            </div>
+        </div>
+
+        <!-- Knowledge Section -->
+        <div id="knowledge" class="section">
+            <h2>Knowledge Base</h2>
+            <div class="card">
+                <h3>Upload PDF</h3>
+                <input type="file" id="pdf-upload" accept=".pdf">
+                <button onclick="uploadPDF()">Upload</button>
+            </div>
+            <div class="card">
+                <h3>Files</h3>
+                <ul id="file-list"></ul>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- AUTHENTICATION ---
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = 'index.html';
+
+        // Display User Email
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            
+            const payload = JSON.parse(jsonPayload);
+            document.getElementById('user-info-display').textContent = payload.email || 'Admin';
+        } catch (e) { 
+            console.error('Token parse error', e); 
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'index.html';
+        }
+
+        // Global Fetch Interceptor to add Bearer Token
+        const originalFetch = window.fetch;
+        window.fetch = async (url, options = {}) => {
+            if (!options.headers) options.headers = {};
+            
+            // Handle different header types, simplified for this app
+            if (options.headers instanceof Headers) {
+                options.headers.append('Authorization', `Bearer ${token}`);
+            } else if (!Array.isArray(options.headers)) {
+                options.headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await originalFetch(url, options);
+            
+            if (response.status === 401 || response.status === 403) {
+                logout();
+            }
+            return response;
+        };
+
+        const API = '/api';
+
+        // --- TOAST SYSTEM ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            // Icon based on type
+            let icon = 'ℹ️';
+            if(type === 'success') icon = '✅';
+            if(type === 'error') icon = '❌';
+            
+            toast.innerHTML = `<span>${icon}</span> <div class="toast-content">${message}</div>`;
+            container.appendChild(toast);
+            
+            // Remove after 3s
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- MODAL SYSTEM ---
+        let currentConfirmCallback = null;
+        
+        function showConfirm(title, message, isDanger, callback) {
+            const overlay = document.getElementById('confirm-modal');
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-msg').innerText = message;
+            
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            confirmBtn.className = isDanger ? 'modal-btn btn-confirm danger' : 'modal-btn btn-confirm';
+            
+            currentConfirmCallback = callback;
+            overlay.classList.add('open');
+        }
+        
+        function closeModal() {
+            document.getElementById('confirm-modal').classList.remove('open');
+            currentConfirmCallback = null;
+        }
+
+        document.getElementById('modal-confirm-btn').onclick = () => {
+            if(currentConfirmCallback) currentConfirmCallback();
+            closeModal();
+        };
+
+        // --- APP LOGIC ---
+
+        function show(id) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('nav a').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if(id === 'instructions') loadChannelsForInstructions();
+            if(id === 'channels') loadChannels();
+            if(id === 'memory') loadChannelsForMemory();
+            if(id === 'knowledge') loadFiles();
+        }
+
+        // Instructions
+        async function loadChannelsForInstructions() {
+             try {
+                const res = await fetch(`${API}/channels`);
+                const data = await res.json();
+                const select = document.getElementById('instruct-channel-select');
+                const currentVal = select.value;
+                
+                select.innerHTML = '<option value="">(Global Default)</option>' + 
+                    data.channels.map(c => `<option value="${c.id}">#${c.name} (${c.id})</option>`).join('');
+                select.value = currentVal;
+                
+                if(!select.value && currentVal) select.value = ''; 
+                loadInstructions();
+             } catch(e) { showToast('Failed to load channels', 'error'); }
+        }
+
+        async function loadInstructions() {
+            const channelId = document.getElementById('instruct-channel-select').value;
+            const url = channelId ? `${API}/config/instructions?channelId=${channelId}` : `${API}/config/instructions`;
+            
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                document.getElementById('sys-instruct').value = data.instructions;
+            } catch(e) { showToast('Failed to load instructions', 'error'); }
+        }
+
+        async function saveInstructions() {
+            const instructions = document.getElementById('sys-instruct').value;
+            const channelId = document.getElementById('instruct-channel-select').value;
+            
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = 'Saving...';
+            btn.disabled = true;
+
+            try {
+                await fetch(`${API}/config/instructions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instructions, channelId })
+                });
+                showToast('Instructions saved successfully!', 'success');
+            } catch(e) {
+                showToast('Error saving instructions', 'error');
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Channels
+        async function loadChannels() {
+            try {
+                const res = await fetch(`${API}/channels`);
+                const data = await res.json();
+                const list = document.getElementById('channel-list');
+                list.innerHTML = data.channels.map(c => `
+                    <li>
+                        <span><b>#${c.name}</b> <small style="color:#888; margin-left:8px;">(${c.id})</small></span>
+                        <button class="delete-btn" onclick="removeChannel('${c.id}')">Remove</button>
+                    </li>
+                `).join('');
+            } catch(e) { showToast('Error loading channels', 'error'); }
+        }
+
+        async function addChannel() {
+            const id = document.getElementById('new-channel').value;
+            if(!id) return showToast('Please enter a Channel ID', 'error');
+            
+            // Check if it looks like an ID (numbers)
+            if(!/^\d+$/.test(id)) {
+                return showToast('Invalid Channel ID format (should be numbers)', 'error');
+            }
+
+            try {
+                const res = await fetch(`${API}/channels`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channelId: id })
+                });
+                
+                const data = await res.json();
+                if(data.error) throw new Error(data.error);
+
+                document.getElementById('new-channel').value = '';
+                showToast('Channel added!', 'success');
+                loadChannels();
+            } catch(e) { showToast(e.message, 'error'); }
+        }
+
+        function removeChannel(id) {
+            showConfirm('Remove Channel', `Are you sure you want to remove access to channel ${id}?`, true, async () => {
+                try {
+                    await fetch(`${API}/channels/${id}`, { method: 'DELETE' });
+                    showToast('Channel removed', 'success');
+                    loadChannels();
+                } catch(e) { showToast('Error removing channel', 'error'); }
+            });
+        }
+
+        // Memory
+        async function loadChannelsForMemory() {
+            try {
+                const res = await fetch(`${API}/channels`);
+                const data = await res.json();
+                const select = document.getElementById('memory-channel-select');
+                select.innerHTML = '<option value="">Select Channel...</option>' + 
+                    data.channels.map(c => `<option value="${c.id}">#${c.name} (${c.id})</option>`).join('');
+            } catch(e) { showToast('Error loading channels', 'error'); }
+        }
+
+        async function loadMemory() {
+            const id = document.getElementById('memory-channel-select').value;
+            if(!id) {
+                document.getElementById('memory-view').value = '';
+                return;
+            }
+            const res = await fetch(`${API}/memory/${id}`);
+            const data = await res.json();
+            document.getElementById('memory-view').value = data.summary || 'No memory yet.';
+        }
+
+        function resetMemory() {
+            const id = document.getElementById('memory-channel-select').value;
+            if(!id) return showToast('Select a channel first', 'error');
+            
+            showConfirm('Clear Memory', 'This will permanently wipe the bot\'s memory for this channel.', true, async () => {
+                await fetch(`${API}/memory/${id}`, { method: 'DELETE' });
+                showToast('Memory wiped', 'success');
+                loadMemory();
+            });
+        }
+
+        // Knowledge
+        async function loadFiles() {
+            try {
+                const res = await fetch(`${API}/knowledge`);
+                const data = await res.json();
+                document.getElementById('file-list').innerHTML = data.files.map(f => `
+                    <li>
+                        <span>
+                            <span style="font-size: 1.2rem; margin-right: 10px;">📄</span>
+                            ${f.filename} 
+                            <span style="font-size:0.8rem; color:#888; margin-left: 10px;">
+                                ${new Date(f.upload_date).toLocaleDateString()}
+                            </span>
+                        </span>
+                        <button class="delete-btn" onclick="removeFile('${f.id}')">Delete</button>
+                    </li>
+                `).join('');
+            } catch(e) { showToast('Error loading files', 'error'); }
+        }
+
+        function removeFile(id) {
+            showConfirm('Delete File', 'Are you sure you want to delete this file from the knowledge base?', true, async () => {
+                try {
+                    await fetch(`${API}/knowledge/${id}`, { method: 'DELETE' });
+                    showToast('File deleted', 'success');
+                    loadFiles();
+                } catch(e) { showToast('Error deleting file', 'error'); }
+            });
+        }
+
+        async function uploadPDF() {
+            const fileInput = document.getElementById('pdf-upload');
+            const file = fileInput.files[0];
+            if(!file) return showToast('Please select a file first', 'error');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const btn = event.target;
+            btn.textContent = 'Uploading...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if(res.ok) {
+                    showToast('File uploaded successfully', 'success');
+                    fileInput.value = '';
+                    loadFiles();
+                } else {
+                    showToast('Upload failed', 'error');
+                }
+            } catch(e) {
+                showToast('Error: ' + e.message, 'error');
+            } finally {
+                btn.textContent = 'Upload';
+                btn.disabled = false;
+            }
+        }
+
+        async function checkBotStatus() {
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            try {
+                const res = await fetch(`${API}/status`, {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+                });
+                const data = await res.json();
+                
+                if (data.status === 'online') {
+                    dot.style.background = '#3ba55c'; // green
+                    dot.style.boxShadow = '0 0 8px #3ba55c';
+                    text.textContent = 'Bot Online';
+                    text.style.color = '#fff';
+                } else {
+                    dot.style.background = '#ed4245'; // red
+                    dot.style.boxShadow = 'none';
+                    text.textContent = 'Bot Offline';
+                    text.style.color = '#ed4245';
+                }
+            } catch (e) {
+                dot.style.background = '#ed4245';
+                text.textContent = 'Status Error';
+            }
+        }
+
+        // Initialize default view
+        checkBotStatus();
+        setInterval(checkBotStatus, 60000); // Check every minute
+        loadChannelsForInstructions();
+    </script>
+</body>
+</html>
