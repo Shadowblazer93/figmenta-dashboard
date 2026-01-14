@@ -78,7 +78,7 @@ async function initTables() {
 initTables();
 
 // Upload setup
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Auth Middleware
 const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -275,16 +275,13 @@ app.post('/api/upload', authenticateToken, upload.single('file'), async (req, re
     try {
         if (!req.file) throw new Error('No file uploaded');
         
-        const dataBuffer = fs.readFileSync(req.file.path);
+        const dataBuffer = req.file.buffer;
         const data = await pdf(dataBuffer);
         
         await pool.query(
             'INSERT INTO knowledge_base (filename, content, upload_date) VALUES ($1, $2, $3)',
             [req.file.originalname, data.text, Date.now()]
         );
-
-        // Cleanup temp file
-        fs.unlinkSync(req.file.path);
 
         res.json({ success: true, textLength: data.text.length });
     } catch (error) {
