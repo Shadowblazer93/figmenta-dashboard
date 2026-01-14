@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="images/copilot.png">
     <title>Figmenta Bot Admin</title>
     <style>
         :root { 
             --primary: #5865F2; 
             --primary-hover: #4752c4;
             --bg: #2C2F33; 
-            --panel: #23272A; 
+            --panel: #272931; 
             --text: #FFFFFF; 
             --text-secondary: #99AAB5;
             --danger: #ed4245;
@@ -19,21 +20,61 @@
 
         body { 
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
-            background: linear-gradient(135deg, #23272A 0%, #2f3136 100%);
+            /* Dark grey background with faint grid pattern */
+            background-color: #202225;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
             color: var(--text); 
             margin: 0; 
             display: flex; 
             height: 100vh;
         }
 
-        /* Scrollbar */
+        /* Loading Bar */
+        .progress-container {
+            width: 100%;
+            background-color: #333;
+            border-radius: 4px;
+            height: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+            display: none; /* hidden by default */
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Cheat indeterminate animation */
+        .progress-bar.indeterminate {
+            width: 100%;
+            background: linear-gradient(90deg, 
+                var(--primary) 25%, 
+                var(--primary-hover) 50%, 
+                var(--primary) 75%
+            );
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite linear;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
         ::-webkit-scrollbar-thumb { background: #111; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #000; }
 
         nav { 
-            background: rgba(35, 39, 42, 0.95); 
+            background: rgba(40, 44, 51, 0.95); 
             width: 280px; 
             height: 100vh; 
             padding: 30px 20px; 
@@ -98,7 +139,7 @@
             margin-bottom: 20px; 
             font-weight: 600; 
             color: white;
-            border-bottom: 2px solid #333;
+            border-bottom: 2px solid #ccc;
             padding-bottom: 15px;
         }
         
@@ -299,7 +340,10 @@
     </div>
 
     <nav>
-        <h1>🤖 Connected Copilot</h1>
+        <h1>
+            <img src="images/copilot.png" alt="Logo" style="width: 32px; height: 32px; object-fit: contain;">
+            Connected Copilot
+        </h1>
         <a onclick="show('instructions')" class="active">Systems Instructions</a>
         <a onclick="show('channels')">Allowed Channels</a>
         <a onclick="show('memory')">Memory Control</a>
@@ -368,8 +412,21 @@
             <h2>Knowledge Base</h2>
             <div class="card">
                 <h3>Upload PDF</h3>
-                <input type="file" id="pdf-upload" accept=".pdf">
-                <button onclick="uploadPDF()">Upload</button>
+                <div style="display: flex; gap: 10px; align-items: flex-start; flex-direction: column;">
+                     <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="file" id="pdf-upload" accept=".pdf">
+                        <button onclick="uploadPDF(this)">Upload</button>
+                    </div>
+                     <!-- Progress UI -->
+                     <div id="upload-status-container" style="width: 100%; display: none;">
+                        <div class="progress-container" style="display: block;">
+                            <div id="upload-progress-bar" class="progress-bar indeterminate"></div>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">
+                            Uploading and processing... (this may take a while)
+                        </div>
+                     </div>
+                </div>
             </div>
             <div class="card">
                 <h3>Files</h3>
@@ -649,7 +706,7 @@
             });
         }
 
-        async function uploadPDF() {
+        async function uploadPDF(btnElement) {
             const fileInput = document.getElementById('pdf-upload');
             const file = fileInput.files[0];
             if(!file) return showToast('Please select a file first', 'error');
@@ -657,9 +714,13 @@
             const formData = new FormData();
             formData.append('file', file);
 
-            const btn = event.target;
+            const btn = btnElement || event.target;
+            const originalText = btn.textContent;
+            
+            // UI Updates
             btn.textContent = 'Uploading...';
             btn.disabled = true;
+            document.getElementById('upload-status-container').style.display = 'block';
 
             try {
                 const res = await fetch(`${API}/upload`, {
@@ -676,8 +737,9 @@
             } catch(e) {
                 showToast('Error: ' + e.message, 'error');
             } finally {
-                btn.textContent = 'Upload';
+                btn.textContent = originalText;
                 btn.disabled = false;
+                document.getElementById('upload-status-container').style.display = 'none';
             }
         }
 
