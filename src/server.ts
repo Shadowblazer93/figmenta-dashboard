@@ -274,20 +274,29 @@ app.post('/api/upload', authenticateToken, upload.single('file'), async (req, re
         if (!req.file) throw new Error('No file uploaded');
         
         const dataBuffer = req.file.buffer;
-        const data = await pdf(dataBuffer);
+        
+        // Sanitize PDF text to avoid Unicode errors in Postgres/Supabase
+        let text = '';
+        try {
+            const data = await pdf(dataBuffer);
+            text = data.text.replace(/\x00/g, ''); // Remove null bytes
+        } catch (pdfError) {
+             console.error('PDF Parse Error:', pdfError);
+             throw new Error('Failed to parse PDF content');
+        }
         
         // Using Supabase client to insert extracted text content
         const { error } = await supabase
             .from('knowledge_base')
             .insert({
                 filename: req.file.originalname,
-                content: data.text,
+                content: text,
                 upload_date: Date.now()
             });
 
         if (error) throw new Error(error.message);
 
-        res.json({ success: true, textLength: data.text.length });
+        res.json({ success: true, textLength: text.length });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: (error as Error).message });
