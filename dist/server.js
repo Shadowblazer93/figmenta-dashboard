@@ -76,7 +76,7 @@ async function initTables() {
 }
 initTables();
 // Upload setup
-const upload = (0, multer_1.default)({ dest: 'uploads/' });
+const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
 // Auth Middleware
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
