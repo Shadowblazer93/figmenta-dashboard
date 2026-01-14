@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@discordjs/rest": "^2.6.0",
+    "@supabase/supabase-js": "^2.90.1",
     "@types/bcryptjs": "^3.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "bcryptjs": "^3.0.3",
@@ -19,8 +20,7 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.3",
     "multer": "^1.4.5-lts.1",
-    "pdf-parse": "^1.1.1",
-    "pg": "^8.16.3"
+    "pdf-parse": "^1.1.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

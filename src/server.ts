@@ -1,9 +1,8 @@
 import express from 'express';
 import multer from 'multer';
-import pg from 'pg';
+import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import cors from 'cors';
-import fs from 'fs';
 import pdf from 'pdf-parse';
 import dotenv from 'dotenv';
 import { REST } from '@discordjs/rest';
@@ -14,10 +13,19 @@ import jwt from 'jsonwebtoken';
 // Load env from root
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const { Pool } = pg;
 const app = express();
 const port = 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-change-this';
+
+// Supabase Setup
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '';
+
+if (!supabaseUrl || !supabaseKey) {
+    console.warn('SUPABASE_URL or SUPABASE_KEY/SUPABASE_SERVICE_ROLE_KEY missing. Database operations will fail.');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Middleware
 app.use(cors());
@@ -26,11 +34,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-// Database setup
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false }
-});
+// Database setup (pg removed)
 
 // Discord REST Client
 const discordToken = process.env.DISCORD_TOKEN;
@@ -42,40 +46,12 @@ if (discordToken) {
     console.warn('DISCORD_TOKEN not found in environment variables. Channel name resolution will not work.');
 }
 
-// Ensure tables exist
+// Ensure tables exist - Skipped for Vercel/Supabase JS (Use SQL Editor)
+/*
 async function initTables() {
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS knowledge_base (
-            id SERIAL PRIMARY KEY,
-            filename TEXT,
-            content TEXT,
-            upload_date BIGINT
-        );
-        CREATE TABLE IF NOT EXISTS channel_instructions (
-            channel_id TEXT PRIMARY KEY,
-            instructions TEXT
-        );
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS config (
-            key TEXT PRIMARY KEY,
-
-            value TEXT
-        );
-        CREATE TABLE IF NOT EXISTS allowed_channels (
-            channel_id TEXT PRIMARY KEY
-        );
-        CREATE TABLE IF NOT EXISTS channel_memory (
-            channel_id TEXT PRIMARY KEY,
-            summary TEXT,
-            last_updated BIGINT
-        );
-    `);
+    // ... use Supabase Dashboard SQL Editor to create tables
 }
-initTables();
+*/
 
 // Upload setup
 const upload = multer({ storage: multer.memoryStorage() });
@@ -100,10 +76,13 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
 app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     try {
-        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        const user = result.rows[0];
+        const { data: user, error: dbError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .single();
 
-        if (!user) {
+        if (dbError || !user) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
@@ -141,13 +120,21 @@ app.get('/api/config/instructions', authenticateToken, async (req, res) => {
         let instructions = '';
         
         if (channelId && typeof channelId === 'string') {
-            const result = await pool.query('SELECT instructions FROM channel_instructions WHERE channel_id = $1', [channelId]);
-            instructions = result.rows[0]?.instructions || '';
+            const { data } = await supabase
+                .from('channel_instructions')
+                .select('instructions')
+                .eq('channel_id', channelId)
+                .single();
+            instructions = data?.instructions || '';
         }
 
         if (!instructions && !channelId) {
-             const result = await pool.query('SELECT value FROM config WHERE key = $1', ['system_instructions']);
-             instructions = result.rows[0]?.value || '';
+             const { data } = await supabase
+                .from('config')
+                .select('value')
+                .eq('key', 'system_instructions')
+                .single();
+             instructions = data?.value || '';
         }
 
         res.json({ instructions });
@@ -163,18 +150,19 @@ app.post('/api/config/instructions', authenticateToken, async (req, res) => {
         
         if (channelId) {
             if (instructions) {
-                await pool.query(
-                    'INSERT INTO channel_instructions (channel_id, instructions) VALUES ($1, $2) ON CONFLICT (channel_id) DO UPDATE SET instructions = EXCLUDED.instructions',
-                    [channelId, instructions]
-                );
+                await supabase
+                    .from('channel_instructions')
+                    .upsert({ channel_id: channelId, instructions });
             } else {
-                 await pool.query('DELETE FROM channel_instructions WHERE channel_id = $1', [channelId]);
+                 await supabase
+                    .from('channel_instructions')
+                    .delete()
+                    .eq('channel_id', channelId);
             }
         } else {
-            await pool.query(
-                'INSERT INTO config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
-                ['system_instructions', instructions]
-            );
+            await supabase
+                .from('config')
+                .upsert({ key: 'system_instructions', value: instructions });
         }
         
         res.json({ success: true });
@@ -186,11 +174,13 @@ app.post('/api/config/instructions', authenticateToken, async (req, res) => {
 // 2. Allowed Channels
 app.get('/api/channels', authenticateToken, async (req, res) => {
     try {
-        const results = await pool.query('SELECT channel_id FROM allowed_channels');
+        const { data } = await supabase
+            .from('allowed_channels')
+            .select('channel_id');
 
-        const channels = results.rows.map(r => r.channel_id);
+        const channels = (data || []).map((r: any) => r.channel_id);
         
-        const channelsWithNames = await Promise.all(channels.map(async (id) => {
+        const channelsWithNames = await Promise.all(channels.map(async (id: string) => {
             let name = 'Unknown Channel';
             if (discordRest) {
                 try {
@@ -223,7 +213,10 @@ app.post('/api/channels', authenticateToken, async (req, res) => {
              }
         }
 
-        await pool.query('INSERT INTO allowed_channels (channel_id) VALUES ($1) ON CONFLICT (channel_id) DO NOTHING', [channelId]);
+        await supabase
+            .from('allowed_channels')
+            .upsert({ channel_id: channelId }); // on conflict do nothing semantics tricky with upsert but ok for this simple case or ignoreDuplicates
+        
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: (error as Error).message });
@@ -234,7 +227,7 @@ app.delete('/api/channels/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
 
-        await pool.query('DELETE FROM allowed_channels WHERE channel_id = $1', [id]);
+        await supabase.from('allowed_channels').delete().eq('channel_id', id);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: (error as Error).message });
@@ -246,8 +239,13 @@ app.get('/api/memory/:channelId', authenticateToken, async (req, res) => {
     try {
         const { channelId } = req.params;
 
-        const result = await pool.query('SELECT summary FROM channel_memory WHERE channel_id = $1', [channelId]);
-        res.json({ summary: result.rows[0]?.summary || '' });
+        const { data } = await supabase
+            .from('channel_memory')
+            .select('summary')
+            .eq('channel_id', channelId)
+            .single();
+
+        res.json({ summary: data?.summary || '' });
     } catch (error) {
         res.status(500).json({ error: (error as Error).message });
     }
@@ -257,7 +255,7 @@ app.delete('/api/memory/:channelId', authenticateToken, async (req, res) => {
     try {
         const { channelId } = req.params;
 
-        await pool.query('DELETE FROM channel_memory WHERE channel_id = $1', [channelId]);
+        await supabase.from('channel_memory').delete().eq('channel_id', channelId);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: (error as Error).message });
@@ -278,10 +276,16 @@ app.post('/api/upload', authenticateToken, upload.single('file'), async (req, re
         const dataBuffer = req.file.buffer;
         const data = await pdf(dataBuffer);
         
-        await pool.query(
-            'INSERT INTO knowledge_base (filename, content, upload_date) VALUES ($1, $2, $3)',
-            [req.file.originalname, data.text, Date.now()]
-        );
+        // Using Supabase client to insert extracted text content
+        const { error } = await supabase
+            .from('knowledge_base')
+            .insert({
+                filename: req.file.originalname,
+                content: data.text,
+                upload_date: Date.now()
+            });
+
+        if (error) throw new Error(error.message);
 
         res.json({ success: true, textLength: data.text.length });
     } catch (error) {
@@ -292,9 +296,12 @@ app.post('/api/upload', authenticateToken, upload.single('file'), async (req, re
 
 app.get('/api/knowledge', authenticateToken, async (req, res) => {
     try {
-        const results = await pool.query('SELECT id, filename, upload_date FROM knowledge_base ORDER BY upload_date DESC');
+        const { data } = await supabase
+            .from('knowledge_base')
+            .select('id, filename, upload_date')
+            .order('upload_date', { ascending: false });
 
-        res.json({ files: results.rows });
+        res.json({ files: data || [] });
     } catch (error) {
         res.status(500).json({ error: (error as Error).message });
     }
@@ -303,7 +310,7 @@ app.get('/api/knowledge', authenticateToken, async (req, res) => {
 app.delete('/api/knowledge/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-
+        await supabase.from('knowledge_base').delete().eq('id', id);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: (error as Error).message });
